@@ -5,6 +5,16 @@
     <title>Basic Table Example</title>
     <style>
         body { font-family: sans-serif; padding: 16px; }
+        .updated-strip { display: flex; gap: 10px; margin: 8px 0 14px; flex-wrap: wrap; }
+        .updated-box {
+            border: 1px solid #444;
+            border-radius: 6px;
+            padding: 8px 10px;
+            min-width: 210px;
+            background: #fafafa;
+        }
+        .updated-zone { font-size: 12px; color: #444; }
+        .updated-time { font-size: 14px; font-weight: 700; margin-top: 2px; }
         .filters { display: flex; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
         .filters label { display: flex; flex-direction: column; font-size: 13px; gap: 4px; }
         .filters select { padding: 4px 8px; font-size: 13px; min-width: 180px; }
@@ -31,20 +41,40 @@
 
     <h2>Chest Data Table</h2>
 
+    <div class="updated-strip">
+        <div class="updated-box">
+            <div class="updated-zone">Updated (Singapore)</div>
+            <div class="updated-time" id="updated-sg">-</div>
+        </div>
+        <div class="updated-box">
+            <div class="updated-zone">Updated (Europe)</div>
+            <div class="updated-time" id="updated-utc">-</div>
+        </div>
+        <div class="updated-box">
+            <div class="updated-zone">Updated (PST)</div>
+            <div class="updated-time" id="updated-la">-</div>
+        </div>
+    </div>
+
     <div class="filters">
-        <label>Chest <select id="filter-chest"><option value="">All</option></select></label>
         <label>From <select id="filter-from"><option value="">All</option></select></label>
         <label>Source <select id="filter-source"><option value="">All</option></select></label>
         <label style="justify-content:flex-end"><button id="reset-filters" style="padding:4px 12px;font-size:13px;margin-top:16px">Reset</button></label>
     </div>
 
+    <div class="updated-strip" style="margin-top: 0; margin-bottom: 12px;">
+        <div class="updated-box">
+            <div class="updated-zone">Total Chest Number (Filtered)</div>
+            <div class="updated-time" id="total-chest-number">0</div>
+        </div>
+    </div>
+
     <table>
         <thead>
             <tr>
-                <th>#</th>
-                <th>Chest</th>
                 <th>From</th>
-                <th id="source-header">Source</th>
+                <th id="source-header">Source Type</th>
+                <th>Chest Number</th>
             </tr>
         </thead>
         <tbody id="data-table-body">
@@ -57,13 +87,38 @@
     <script src="data.js"></script>
 
     <script>
+        const latestCommitIso = '2026-04-17T19:37:34-07:00';
         const tbody = document.getElementById('data-table-body');
         const rowCount = document.getElementById('row-count');
         const sourceHeader = document.getElementById('source-header');
-        const filterChest = document.getElementById('filter-chest');
         const filterFrom = document.getElementById('filter-from');
         const filterSource = document.getElementById('filter-source');
+        const totalChestNumber = document.getElementById('total-chest-number');
+        const updatedUtc = document.getElementById('updated-utc');
+        const updatedLa = document.getElementById('updated-la');
+        const updatedSg = document.getElementById('updated-sg');
         let sourceSortAsc = true;
+
+        function formatInZone(date, timeZone) {
+            return new Intl.DateTimeFormat('en-US', {
+                timeZone,
+                year: 'numeric',
+                month: 'short',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false,
+                timeZoneName: 'short'
+            }).format(date);
+        }
+
+        function renderUpdatedTimes() {
+            const commitDate = new Date(latestCommitIso);
+            updatedUtc.textContent = formatInZone(commitDate, 'Europe/Berlin');
+            updatedLa.textContent = formatInZone(commitDate, 'America/Los_Angeles');
+            updatedSg.textContent = formatInZone(commitDate, 'Asia/Singapore');
+        }
 
         function parseLine(line) {
             const rawTokens = line.replace(/\t/g, '')
@@ -103,18 +158,27 @@
             .map(parseLine)
             .filter(Boolean);
 
+        const groupedRows = Object.values(allRows.reduce((acc, row) => {
+            const from = row.from || '—';
+            const source = row.source || '—';
+            const key = `${from}||${source}`;
+
+            if (!acc[key]) {
+                acc[key] = { from, source, chestNumber: 0 };
+            }
+            acc[key].chestNumber += 1;
+            return acc;
+        }, {}));
+
         // Populate filter dropdowns with sorted unique values
         function unique(arr) { return [...new Set(arr)].filter(Boolean).sort((a,b) => a.localeCompare(b, undefined, {sensitivity:'base'})); }
-        unique(allRows.map(r => r.chest)).forEach(v => filterChest.add(new Option(v, v)));
-        unique(allRows.map(r => r.from)).forEach(v => filterFrom.add(new Option(v, v)));
-        unique(allRows.map(r => r.source)).forEach(v => filterSource.add(new Option(v, v)));
+        unique(groupedRows.map(r => r.from)).forEach(v => filterFrom.add(new Option(v, v)));
+        unique(groupedRows.map(r => r.source)).forEach(v => filterSource.add(new Option(v, v)));
 
         function getFilteredRows() {
-            const c = filterChest.value.toLowerCase();
             const f = filterFrom.value.toLowerCase();
             const s = filterSource.value.toLowerCase();
-            return allRows.filter(row =>
-                (!c || row.chest.toLowerCase() === c) &&
+            return groupedRows.filter(row =>
                 (!f || row.from.toLowerCase() === f) &&
                 (!s || row.source.toLowerCase() === s)
             );
@@ -123,42 +187,40 @@
         function renderTable() {
             const rows = getFilteredRows();
             tbody.innerHTML = '';
-            rows.forEach(({ chest, from, source }, index) => {
+            rows.forEach(({ chestNumber, from, source }) => {
                 const tr = document.createElement('tr');
-                const numberCell = document.createElement('td');
-                numberCell.textContent = (index + 1).toString();
-                tr.appendChild(numberCell);
-                [chest, from, source].forEach(text => {
+                [from, source, chestNumber.toString()].forEach(text => {
                     const td = document.createElement('td');
                     td.textContent = text || '—';
                     tr.appendChild(td);
                 });
                 tbody.appendChild(tr);
             });
-            rowCount.textContent = `${rows.length} of ${allRows.length} rows.`;
+            const total = rows.reduce((sum, row) => sum + row.chestNumber, 0);
+            totalChestNumber.textContent = total.toString();
+            rowCount.textContent = `${rows.length} groups from ${allRows.length} total rows.`;
         }
 
         function sortBySource() {
-            allRows.sort((a, b) => {
+            groupedRows.sort((a, b) => {
                 const result = a.source.localeCompare(b.source, undefined, { sensitivity: 'base' });
                 return sourceSortAsc ? result : -result;
             });
-            sourceHeader.textContent = `Source ${sourceSortAsc ? '▲' : '▼'}`;
+            sourceHeader.textContent = `Source Type ${sourceSortAsc ? '▲' : '▼'}`;
             sourceSortAsc = !sourceSortAsc;
             renderTable();
         }
 
         sourceHeader.addEventListener('click', sortBySource);
-        filterChest.addEventListener('change', renderTable);
         filterFrom.addEventListener('change', renderTable);
         filterSource.addEventListener('change', renderTable);
         document.getElementById('reset-filters').addEventListener('click', () => {
-            filterChest.value = '';
             filterFrom.value = '';
             filterSource.value = '';
             renderTable();
         });
 
+        renderUpdatedTimes();
         renderTable();
     </script>
 
