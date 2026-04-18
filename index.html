@@ -1,12 +1,16 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <title>Basic Table Example</title>
     <style>
+        body { font-family: sans-serif; padding: 16px; }
+        .filters { display: flex; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+        .filters label { display: flex; flex-direction: column; font-size: 13px; gap: 4px; }
+        .filters select { padding: 4px 8px; font-size: 13px; min-width: 180px; }
         table {
             border-collapse: collapse;
-            width: 50%;
+            width: 90%;
         }
         th, td {
             border: 1px solid #444;
@@ -15,16 +19,24 @@
         }
         th {
             background-color: #ddd;
+            cursor: pointer;
         }
-        
+        th:hover {
+            background-color: #bbb;
+        }
+        tr:hover td { background-color: #f5f5f5; }
     </style>
 </head>
 <body>
 
     <h2>Chest Data Table</h2>
 
-    <label for="data-file-input">Load chest data file:</label>
-    <input type="file" id="data-file-input" accept=".txt" />
+    <div class="filters">
+        <label>Chest <select id="filter-chest"><option value="">All</option></select></label>
+        <label>From <select id="filter-from"><option value="">All</option></select></label>
+        <label>Source <select id="filter-source"><option value="">All</option></select></label>
+        <label style="justify-content:flex-end"><button id="reset-filters" style="padding:4px 12px;font-size:13px;margin-top:16px">Reset</button></label>
+    </div>
 
     <table>
         <thead>
@@ -32,7 +44,7 @@
                 <th>#</th>
                 <th>Chest</th>
                 <th>From</th>
-                <th>Source</th>
+                <th id="source-header">Source</th>
             </tr>
         </thead>
         <tbody id="data-table-body">
@@ -42,10 +54,16 @@
 
     <p id="row-count"></p>
 
+    <script src="data.js"></script>
+
     <script>
         const tbody = document.getElementById('data-table-body');
         const rowCount = document.getElementById('row-count');
-        const fileInput = document.getElementById('data-file-input');
+        const sourceHeader = document.getElementById('source-header');
+        const filterChest = document.getElementById('filter-chest');
+        const filterFrom = document.getElementById('filter-from');
+        const filterSource = document.getElementById('filter-source');
+        let sourceSortAsc = true;
 
         function parseLine(line) {
             const rawTokens = line.replace(/\t/g, '')
@@ -59,43 +77,52 @@
                 return null;
             }
 
-            const chest = rawTokens.slice(0, fromIndex).join(', ');
+            let chest = rawTokens.slice(0, fromIndex).join(', ');
             const firstFromValue = rawTokens[fromIndex].replace(/^from:/i, '').trim();
             const fromExtra = rawTokens.slice(fromIndex + 1, sourceIndex).join(', ');
             let from = [firstFromValue, fromExtra].filter(Boolean).join(', ').trim();
 
             const firstSourceValue = rawTokens[sourceIndex].replace(/^source:/i, '').trim();
-            const sourceExtraStart = sourceIndex + 1;
-            
-            let source = firstSourceValue;
-            let extraAfterSource = [];
-            
-            // If from is empty and there's content after source, use first token as from
-            if (!from && rawTokens.length > sourceExtraStart) {
-                from = rawTokens[sourceExtraStart];
-                extraAfterSource = rawTokens.slice(sourceExtraStart + 1);
-            } else if (rawTokens.length > sourceExtraStart) {
-                extraAfterSource = rawTokens.slice(sourceExtraStart);
-            }
-            
-            if (extraAfterSource.length > 0) {
-                source = [source, ...extraAfterSource].filter(Boolean).join(', ').trim();
+            const tokensAfterSource = rawTokens.slice(sourceIndex + 1);
+
+            // Reversed line: From/Source come first, chest name is after Source
+            if (!chest && tokensAfterSource.length > 0) {
+                chest = tokensAfterSource.join(', ');
+                return { chest, from, source: firstSourceValue };
             }
 
-            // If chest is empty and source has comma, discard after comma
-            if (!chest && source.includes(',')) {
-                source = source.split(',')[0].trim();
-            }
-
+            // Normal line
+            let source = [firstSourceValue, ...tokensAfterSource].filter(Boolean).join(', ').trim();
             return { chest, from, source };
         }
 
-        function renderRows(rows) {
+        const allRows = rawData
+            .split(/\r?\n/)
+            .map(line => line.trim())
+            .filter(Boolean)
+            .map(parseLine)
+            .filter(Boolean);
+
+        // Populate filter dropdowns with sorted unique values
+        function unique(arr) { return [...new Set(arr)].filter(Boolean).sort((a,b) => a.localeCompare(b, undefined, {sensitivity:'base'})); }
+        unique(allRows.map(r => r.chest)).forEach(v => filterChest.add(new Option(v, v)));
+        unique(allRows.map(r => r.from)).forEach(v => filterFrom.add(new Option(v, v)));
+        unique(allRows.map(r => r.source)).forEach(v => filterSource.add(new Option(v, v)));
+
+        function getFilteredRows() {
+            const c = filterChest.value.toLowerCase();
+            const f = filterFrom.value.toLowerCase();
+            const s = filterSource.value.toLowerCase();
+            return allRows.filter(row =>
+                (!c || row.chest.toLowerCase() === c) &&
+                (!f || row.from.toLowerCase() === f) &&
+                (!s || row.source.toLowerCase() === s)
+            );
+        }
+
+        function renderTable() {
+            const rows = getFilteredRows();
             tbody.innerHTML = '';
-            if (rows.length === 0) {
-                rowCount.textContent = 'No valid rows found in the file.';
-                return;
-            }
             rows.forEach(({ chest, from, source }, index) => {
                 const tr = document.createElement('tr');
                 const numberCell = document.createElement('td');
@@ -108,35 +135,31 @@
                 });
                 tbody.appendChild(tr);
             });
-            rowCount.textContent = `${rows.length} rows loaded.`;
+            rowCount.textContent = `${rows.length} of ${allRows.length} rows.`;
         }
 
-        function handleFile(event) {
-            const file = event.target.files[0];
-            if (!file) {
-                rowCount.textContent = 'No file selected.';
-                return;
-            }
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const text = e.target.result;
-                const rows = text
-                    .split(/\r?\n/)
-                    .map(line => line.trim())
-                    .filter(Boolean)
-                    .map(parseLine)
-                    .filter(Boolean);
-                renderRows(rows);
-            };
-            reader.onerror = function() {
-                rowCount.textContent = 'Error reading file.';
-            };
-            reader.readAsText(file);
-            rowCount.textContent = `Loading ${file.name}...`;
+        function sortBySource() {
+            allRows.sort((a, b) => {
+                const result = a.source.localeCompare(b.source, undefined, { sensitivity: 'base' });
+                return sourceSortAsc ? result : -result;
+            });
+            sourceHeader.textContent = `Source ${sourceSortAsc ? '▲' : '▼'}`;
+            sourceSortAsc = !sourceSortAsc;
+            renderTable();
         }
 
-        fileInput.addEventListener('change', handleFile);
-        rowCount.textContent = 'Select a .txt file to parse.';
+        sourceHeader.addEventListener('click', sortBySource);
+        filterChest.addEventListener('change', renderTable);
+        filterFrom.addEventListener('change', renderTable);
+        filterSource.addEventListener('change', renderTable);
+        document.getElementById('reset-filters').addEventListener('click', () => {
+            filterChest.value = '';
+            filterFrom.value = '';
+            filterSource.value = '';
+            renderTable();
+        });
+
+        renderTable();
     </script>
 
 </body>
