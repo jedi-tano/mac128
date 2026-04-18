@@ -120,55 +120,9 @@
             updatedSg.textContent = formatInZone(commitDate, 'Asia/Singapore');
         }
 
-        function parseLine(line) {
-            const rawTokens = line.replace(/\t/g, '')
-                                  .split(',')
-                                  .map(token => token.trim())
-                                  .filter(Boolean);
-
-            const fromIndex = rawTokens.findIndex(token => token.toLowerCase().startsWith('from:'));
-            const sourceIndex = rawTokens.findIndex(token => token.toLowerCase().startsWith('source:'));
-            if (fromIndex === -1 || sourceIndex === -1) {
-                return null;
-            }
-
-            let chest = rawTokens.slice(0, fromIndex).join(', ');
-            const firstFromValue = rawTokens[fromIndex].replace(/^from:/i, '').trim();
-            const fromExtra = rawTokens.slice(fromIndex + 1, sourceIndex).join(', ');
-            let from = [firstFromValue, fromExtra].filter(Boolean).join(', ').trim();
-
-            const firstSourceValue = rawTokens[sourceIndex].replace(/^source:/i, '').trim();
-            const tokensAfterSource = rawTokens.slice(sourceIndex + 1);
-
-            // Reversed line: From/Source come first, chest name is after Source
-            if (!chest && tokensAfterSource.length > 0) {
-                chest = tokensAfterSource.join(', ');
-                return { chest, from, source: firstSourceValue };
-            }
-
-            // Normal line
-            let source = [firstSourceValue, ...tokensAfterSource].filter(Boolean).join(', ').trim();
-            return { chest, from, source };
-        }
-
-        const allRows = rawData
-            .split(/\r?\n/)
-            .map(line => line.trim())
-            .filter(Boolean)
-            .map(parseLine)
-            .filter(Boolean);
-
-        const groupedRows = Object.values(allRows.reduce((acc, row) => {
-            const from = row.from || '—';
-            const source = row.source || '—';
-            const key = `${from}||${source}`;
-
-            if (!acc[key]) {
-                acc[key] = { from, source, chestNumber: 0 };
-            }
-            acc[key].chestNumber += 1;
-            return acc;
-        }, {}));
+        // rawData is a pre-grouped JSON array produced by text_to_data_js.py
+        // Each element: { from, source, chestNumber }
+        const groupedRows = rawData;
 
         // Populate filter dropdowns with sorted unique values
         function unique(arr) { return [...new Set(arr)].filter(Boolean).sort((a,b) => a.localeCompare(b, undefined, {sensitivity:'base'})); }
@@ -198,7 +152,7 @@
             });
             const total = rows.reduce((sum, row) => sum + row.chestNumber, 0);
             totalChestNumber.textContent = total.toString();
-            rowCount.textContent = `${rows.length} groups from ${allRows.length} total rows.`;
+            rowCount.textContent = `${rows.length} groups | ${total} total chests.`;
         }
 
         function sortBySource() {
