@@ -87,7 +87,11 @@
     <script src="data.js"></script>
 
     <script>
-        const latestCommitIso = '2026-04-17T19:37:34-07:00';
+        const fallbackUpdatedIso = '2026-04-17T19:37:34-07:00';
+        const latestDataIso =
+            typeof rawDataLastUpdatedIso === 'string' && rawDataLastUpdatedIso
+                ? rawDataLastUpdatedIso
+                : fallbackUpdatedIso;
         const tbody = document.getElementById('data-table-body');
         const rowCount = document.getElementById('row-count');
         const sourceHeader = document.getElementById('source-header');
@@ -114,10 +118,16 @@
         }
 
         function renderUpdatedTimes() {
-            const commitDate = new Date(latestCommitIso);
-            updatedUtc.textContent = formatInZone(commitDate, 'Europe/Berlin');
-            updatedLa.textContent = formatInZone(commitDate, 'America/Los_Angeles');
-            updatedSg.textContent = formatInZone(commitDate, 'Asia/Singapore');
+            const updatedDate = new Date(latestDataIso);
+            if (Number.isNaN(updatedDate.getTime())) {
+                updatedUtc.textContent = '-';
+                updatedLa.textContent = '-';
+                updatedSg.textContent = '-';
+                return;
+            }
+            updatedUtc.textContent = formatInZone(updatedDate, 'Europe/Berlin');
+            updatedLa.textContent = formatInZone(updatedDate, 'America/Los_Angeles');
+            updatedSg.textContent = formatInZone(updatedDate, 'Asia/Singapore');
         }
 
         // rawData is a pre-grouped JSON array produced by text_to_data_js.py
