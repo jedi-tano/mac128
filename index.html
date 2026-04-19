@@ -67,6 +67,10 @@
             <div class="updated-zone">Total Chest Number (Filtered)</div>
             <div class="updated-time" id="total-chest-number">0</div>
         </div>
+        <div class="updated-box">
+            <div class="updated-zone">Total Points (Filtered)</div>
+            <div class="updated-time" id="total-points">0</div>
+        </div>
     </div>
 
     <table>
@@ -75,6 +79,7 @@
                 <th>From</th>
                 <th id="source-header">Source Type</th>
                 <th>Chest Number</th>
+                <th>Points</th>
             </tr>
         </thead>
         <tbody id="data-table-body">
@@ -98,10 +103,54 @@
         const filterFrom = document.getElementById('filter-from');
         const filterSource = document.getElementById('filter-source');
         const totalChestNumber = document.getElementById('total-chest-number');
+        const totalPoints = document.getElementById('total-points');
         const updatedUtc = document.getElementById('updated-utc');
         const updatedLa = document.getElementById('updated-la');
         const updatedSg = document.getElementById('updated-sg');
         let sourceSortAsc = true;
+
+        const DEFAULT_SOURCE_POINTS = {};
+        const DEFAULT_POINTS_PER_CHEST = 0;
+        let sourcePoints = { ...DEFAULT_SOURCE_POINTS };
+
+        function normalizeSourceKey(source) {
+            return (source || '').trim().toLowerCase();
+        }
+
+        function parseSourcePointsText(text) {
+            const parsed = {};
+            text.split(/\r?\n/).forEach(line => {
+                const trimmed = line.trim();
+                if (!trimmed || trimmed.startsWith('#')) {
+                    return;
+                }
+                const delimiterIndex = trimmed.lastIndexOf('|');
+                if (delimiterIndex <= 0) {
+                    return;
+                }
+                const source = normalizeSourceKey(trimmed.slice(0, delimiterIndex));
+                const pointsText = trimmed.slice(delimiterIndex + 1).trim();
+                const pointsValue = Number(pointsText);
+                if (source && Number.isFinite(pointsValue) && pointsValue >= 0) {
+                    parsed[source] = Math.floor(pointsValue);
+                }
+            });
+            return parsed;
+        }
+
+        async function loadSourcePointsFromFile() {
+            try {
+                const response = await fetch('points_rules.txt', { cache: 'no-store' });
+                if (!response.ok) {
+                    return;
+                }
+                const fileText = await response.text();
+                const parsed = parseSourcePointsText(fileText);
+                sourcePoints = Object.keys(parsed).length ? parsed : { ...DEFAULT_SOURCE_POINTS };
+            } catch {
+                sourcePoints = { ...DEFAULT_SOURCE_POINTS };
+            }
+        }
 
         function formatInZone(date, timeZone) {
             return new Intl.DateTimeFormat('en-US', {
@@ -148,12 +197,19 @@
             );
         }
 
+        function pointsPerChest(source) {
+            return sourcePoints[normalizeSourceKey(source)] ?? DEFAULT_POINTS_PER_CHEST;
+        }
+
         function renderTable() {
             const rows = getFilteredRows();
             tbody.innerHTML = '';
+            let pointsTotal = 0;
             rows.forEach(({ chestNumber, from, source }) => {
                 const tr = document.createElement('tr');
-                [from, source, chestNumber.toString()].forEach(text => {
+                const rowPoints = chestNumber * pointsPerChest(source || '');
+                pointsTotal += rowPoints;
+                [from, source, chestNumber.toString(), rowPoints.toString()].forEach(text => {
                     const td = document.createElement('td');
                     td.textContent = text || '—';
                     tr.appendChild(td);
@@ -162,7 +218,8 @@
             });
             const total = rows.reduce((sum, row) => sum + row.chestNumber, 0);
             totalChestNumber.textContent = total.toString();
-            rowCount.textContent = `${rows.length} groups | ${total} total chests.`;
+            totalPoints.textContent = pointsTotal.toString();
+            rowCount.textContent = `${rows.length} groups | ${total} total chests | ${pointsTotal} total points.`;
         }
 
         function sortBySource() {
@@ -184,8 +241,13 @@
             renderTable();
         });
 
-        renderUpdatedTimes();
-        renderTable();
+        async function initializePage() {
+            renderUpdatedTimes();
+            await loadSourcePointsFromFile();
+            renderTable();
+        }
+
+        initializePage();
     </script>
 
 </body>

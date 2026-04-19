@@ -1,0 +1,12 @@
+# Source Type|Points Per Chest
+# Edit this file to change scoring rules.
+# Lines starting with # are comments.
+
+Level 25 Crypt|25
+Carrot Monster|10
+Rare Dragon Chest|50
+Epic Dragon Chest|75
+Legendary Dragon Chest|100
+Farm Chest|5
+Guild Chest|15
+Event Chest|20
