@@ -47,7 +47,7 @@
 </head>
 <body>
 
-    <h2>Chest Data Table</h2>
+    <h2>Data for this week <span id="week-number"></span></h2>
 
     <div class="updated-strip">
         <div class="updated-box">
@@ -257,9 +257,60 @@
             renderTable();
         });
 
+        function getWeekNumber(date) {
+            const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+            const dayNum = d.getUTCDay() || 7;
+            d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+            const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+            return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+        }
+
+        function getWeekStartEnd(date) {
+            // Get the day of week in PST (0=Sunday, 1=Monday, ..., 6=Saturday)
+            const formatter = new Intl.DateTimeFormat('en-US', {
+                timeZone: 'America/Los_Angeles',
+                weekday: 'long',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit'
+            });
+            
+            const parts = formatter.formatToParts(date);
+            const weekdayMap = { 'Sunday': 0, 'Monday': 1, 'Tuesday': 2, 'Wednesday': 3, 'Thursday': 4, 'Friday': 5, 'Saturday': 6 };
+            const weekday = weekdayMap[parts.find(p => p.type === 'weekday').value];
+            
+            // Calculate offset to Sunday (0) in PST
+            const offsetToSunday = weekday; // Sunday = 0, Monday = 1, etc.
+            
+            const start = new Date(date);
+            start.setDate(start.getDate() - offsetToSunday);
+            
+            const end = new Date(start);
+            end.setDate(end.getDate() + 6); // Saturday
+            
+            return { start, end };
+        }
+
+        function formatDateShort(date) {
+            return new Intl.DateTimeFormat('en-US', {
+                month: 'short',
+                day: 'numeric'
+            }).format(date);
+        }
+
+        function displayWeekNumber() {
+            const today = new Date();
+            const weekNum = getWeekNumber(today);
+            const { start, end } = getWeekStartEnd(today);
+            const startStr = formatDateShort(start);
+            const endStr = formatDateShort(end);
+            document.getElementById('week-number').textContent = `(Week ${weekNum}: ${startStr} - ${endStr})`;
+        }
+
         async function initializePage() {
             renderUpdatedTimes();
             await loadSourcePointsFromFile();
+            displayWeekNumber();
             renderTable();
         }
 
