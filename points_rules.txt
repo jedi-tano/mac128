@@ -1,14 +1,15 @@
 # Source Type|Points Per Chest
 # Edit this file to change scoring rules.
 # Lines starting with # are comments.
+COLOR_MAX_POINTS=200
 
 Level 20 epic Crypt|1
-Level 25 epic Crypt|1
+Level 25 epic Crypt|2
 Level 25 rare Crypt|1
 Level 25 crypt|1
 Level 30 rare crypt|2
-Level 30 epic crypt|2
-Level 35 epic Crypt|3
+Level 30 epic crypt|3
+Level 35 epic Crypt|4
 Level 35 rare Crypt|3
 Level 25 citadel |1
 Level 30 citadel |2
@@ -24,7 +25,8 @@ Legendary Dragon Chest|0
 Farm Chest|0
 Guild Chest|0
 Event Chest|0
-Epic Undead squad|1
-Beastman|1
+Epic Undead squad|2
+Beastman|2
 Bank|1
 Mercenary Exchange|1
+Arachne's Swarm Epic squad |2

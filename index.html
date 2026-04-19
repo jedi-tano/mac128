@@ -15,13 +15,32 @@
         }
         .updated-zone { font-size: 12px; color: #444; }
         .updated-time { font-size: 14px; font-weight: 700; margin-top: 2px; }
+        .points-display {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
         #total-points {
-            display: inline-block;
+            font-size: 14px;
+            font-weight: 700;
             min-width: 70px;
-            padding: 3px 8px;
-            border-radius: 4px;
+            text-align: right;
+        }
+        #points-color-bar {
+            display: inline-block;
+            width: 150px;
+            height: 24px;
             border: 1px solid #444;
-            color: #111;
+            border-radius: 4px;
+            background: #f0f0f0;
+            position: relative;
+            overflow: hidden;
+        }
+        #points-color-fill {
+            height: 100%;
+            width: 0%;
+            background: red;
+            transition: background-color 0.2s, width 0.2s;
         }
         .filters { display: flex; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
         .filters label { display: flex; flex-direction: column; font-size: 13px; gap: 4px; }
@@ -76,8 +95,13 @@
             <div class="updated-time" id="total-chest-number">0</div>
         </div>
         <div class="updated-box">
-            <div class="updated-zone">Total Points (Filtered)</div>
-            <div class="updated-time" id="total-points">0</div>
+            <div class="updated-zone">Total Points (Filtered) - Color bar</div>
+            <div class="points-display">
+                <div id="total-points">0</div>
+                <div id="points-color-bar">
+                    <div id="points-color-fill"></div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -112,6 +136,7 @@
         const filterSource = document.getElementById('filter-source');
         const totalChestNumber = document.getElementById('total-chest-number');
         const totalPoints = document.getElementById('total-points');
+        const pointsColorFill = document.getElementById('points-color-fill');
         const updatedUtc = document.getElementById('updated-utc');
         const updatedLa = document.getElementById('updated-la');
         const updatedSg = document.getElementById('updated-sg');
@@ -119,7 +144,9 @@
 
         const DEFAULT_SOURCE_POINTS = {};
         const DEFAULT_POINTS_PER_CHEST = 0;
+        const DEFAULT_COLOR_MAX_POINTS = 200;
         let sourcePoints = { ...DEFAULT_SOURCE_POINTS };
+        let colorMaxPoints = DEFAULT_COLOR_MAX_POINTS;
 
         function normalizeSourceKey(source) {
             return (source || '').trim().toLowerCase();
@@ -127,11 +154,24 @@
 
         function parseSourcePointsText(text) {
             const parsed = {};
+            let parsedColorMaxPoints = DEFAULT_COLOR_MAX_POINTS;
             text.split(/\r?\n/).forEach(line => {
                 const trimmed = line.trim();
                 if (!trimmed || trimmed.startsWith('#')) {
                     return;
                 }
+
+                if (trimmed.includes('=') && !trimmed.includes('|')) {
+                    const [rawKey, rawValue] = trimmed.split('=', 2).map(v => v.trim());
+                    if (rawKey.toUpperCase() === 'COLOR_MAX_POINTS') {
+                        const value = Number(rawValue);
+                        if (Number.isFinite(value) && value > 0) {
+                            parsedColorMaxPoints = value;
+                        }
+                    }
+                    return;
+                }
+
                 const delimiterIndex = trimmed.lastIndexOf('|');
                 if (delimiterIndex <= 0) {
                     return;
@@ -143,7 +183,7 @@
                     parsed[source] = Math.floor(pointsValue);
                 }
             });
-            return parsed;
+            return { parsed, parsedColorMaxPoints };
         }
 
         async function loadSourcePointsFromFile() {
@@ -153,10 +193,12 @@
                     return;
                 }
                 const fileText = await response.text();
-                const parsed = parseSourcePointsText(fileText);
+                const { parsed, parsedColorMaxPoints } = parseSourcePointsText(fileText);
                 sourcePoints = Object.keys(parsed).length ? parsed : { ...DEFAULT_SOURCE_POINTS };
+                colorMaxPoints = parsedColorMaxPoints;
             } catch {
                 sourcePoints = { ...DEFAULT_SOURCE_POINTS };
+                colorMaxPoints = DEFAULT_COLOR_MAX_POINTS;
             }
         }
 
@@ -210,10 +252,27 @@
         }
 
         function updateTotalPointsColor(pointsValue) {
-            const clamped = Math.max(0, Math.min(200, pointsValue));
-            const ratio = clamped / 200;
-            const hue = ratio * 120; // 0 = red, 120 = green
-            totalPoints.style.backgroundColor = `hsl(${hue}, 75%, 55%)`;
+            const maxPoints = colorMaxPoints > 0 ? colorMaxPoints : DEFAULT_COLOR_MAX_POINTS;
+            let fillColor;
+            let fillWidth;
+            
+            if (pointsValue <= maxPoints) {
+                // 0 to COLOR_MAX_POINTS: red → magenta → blue (0° → -120°), width 0-100%
+                const ratio = pointsValue / maxPoints;
+                const hue = -ratio * 120;
+                fillColor = `hsl(${hue}, 75%, 55%)`;
+                fillWidth = ratio * 100;
+            } else {
+                // Beyond COLOR_MAX_POINTS: light green to dark green, width stays 100%
+                const exceedRatio = (pointsValue - maxPoints) / maxPoints;
+                const clampedExceed = Math.min(exceedRatio, 1);
+                const lightness = 70 - (clampedExceed * 40);
+                fillColor = `hsl(120, 75%, ${lightness}%)`;
+                fillWidth = 100;
+            }
+            
+            pointsColorFill.style.backgroundColor = fillColor;
+            pointsColorFill.style.width = `${fillWidth}%`;
         }
 
         function renderTable() {
