@@ -2,11 +2,23 @@
 # Edit this file to change scoring rules.
 # Lines starting with # are comments.
 
-Level 25 Crypt|25
-Carrot Monster|10
-Rare Dragon Chest|50
-Epic Dragon Chest|75
-Legendary Dragon Chest|100
-Farm Chest|5
-Guild Chest|15
-Event Chest|20
+Level 20 epic Crypt|1
+Level 25 epic Crypt|1
+Level 25 crypt|1
+Level 30 rare crypt|2
+Level 30 epic crypt|2
+Level 35 epic Crypt|3
+Level 35 rate Crypt|3
+Level 25 citadel |1
+Level 30 citadel |2
+Level 40-44 Raid Runic squad|1
+Level 45 Raid Runic squad|1
+Shadow City|1
+Rise of the Ancients event|1
+Carrot Monster|0
+Rare Dragon Chest|0
+Epic Dragon Chest|0
+Legendary Dragon Chest|0
+Farm Chest|0
+Guild Chest|0
+Event Chest|0
