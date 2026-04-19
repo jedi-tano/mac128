@@ -2,7 +2,7 @@
 # Edit this file to change scoring rules.
 # Lines starting with # are comments.
 
-Level 20 epic Crypt|1
+[MAC] Fankayel: Level 20 epic Crypt|1
 Level 25 epic Crypt|1
 Level 25 rare Crypt|1
 Level 25 crypt|1
@@ -12,7 +12,6 @@ Level 35 epic Crypt|3
 Level 35 rare Crypt|3
 Level 25 citadel |1
 Level 30 citadel |2
-Lvl 35-39 Raid Runic squad|1
 Lvl 40-44 Raid Runic squad|1
 Lvl 45 Raid Runic squad|1
 Shadow City|1
@@ -25,6 +24,5 @@ Farm Chest|0
 Guild Chest|0
 Event Chest|0
 Epic Undead squad|1
-Mercenary Exchange|1
 Beastman|1
-Union of Triumph personal reward
+Bank|1
