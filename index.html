@@ -45,6 +45,11 @@
         .filters { display: flex; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
         .filters label { display: flex; flex-direction: column; font-size: 13px; gap: 4px; }
         .filters select { padding: 4px 8px; font-size: 13px; min-width: 180px; }
+        .version-stamp {
+            margin: -6px 0 12px;
+            font-size: 12px;
+            color: #444;
+        }
         table {
             border-collapse: collapse;
             width: 90%;
@@ -67,6 +72,7 @@
 <body>
 
     <h2>Data for this week <span id="week-number"></span></h2>
+    <div class="version-stamp" id="version-stamp">Design version: loading...</div>
 
     <div class="updated-strip">
         <div class="updated-box">
@@ -140,6 +146,7 @@
         const updatedUtc = document.getElementById('updated-utc');
         const updatedLa = document.getElementById('updated-la');
         const updatedSg = document.getElementById('updated-sg');
+        const versionStamp = document.getElementById('version-stamp');
         let sourceSortAsc = true;
 
         const DEFAULT_SOURCE_POINTS = {};
@@ -227,6 +234,15 @@
             updatedUtc.textContent = formatInZone(updatedDate, 'Europe/Berlin');
             updatedLa.textContent = formatInZone(updatedDate, 'America/Los_Angeles');
             updatedSg.textContent = formatInZone(updatedDate, 'Asia/Singapore');
+        }
+
+        function renderVersionStamp() {
+            const updatedDate = new Date(latestDataIso);
+            if (Number.isNaN(updatedDate.getTime())) {
+                versionStamp.textContent = 'Design version: -';
+                return;
+            }
+            versionStamp.textContent = `Design version: ${formatInZone(updatedDate, 'America/Los_Angeles')}`;
         }
 
         // rawData is a pre-grouped JSON array produced by text_to_data_js.py
@@ -367,6 +383,7 @@
         }
 
         async function initializePage() {
+            renderVersionStamp();
             renderUpdatedTimes();
             await loadSourcePointsFromFile();
             displayWeekNumber();
