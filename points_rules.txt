@@ -12,6 +12,7 @@ Level 35 epic Crypt|3
 Level 35 rare Crypt|3
 Level 25 citadel |1
 Level 30 citadel |2
+Lvl 35-39 Raid Runic squad|1
 Lvl 40-44 Raid Runic squad|1
 Lvl 45 Raid Runic squad|1
 Shadow City|1
