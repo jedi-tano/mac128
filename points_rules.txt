@@ -1,7 +1,7 @@
 # Source Type|Points Per Chest
 # Edit this file to change scoring rules.
 # Lines starting with # are comments.
-COLOR_MAX_POINTS=200
+COLOR_MAX_POINTS=220
 
 Level 20 epic Crypt|1
 Level 25 epic Crypt|2
@@ -10,7 +10,6 @@ Level 25 crypt|1
 Level 30 rare crypt|2
 Level 30 epic crypt|3
 Level 35 epic Crypt|4
-Level 35 rare Crypt|3
 Level 25 citadel |1
 Level 30 citadel |2
 Lvl 35-39 Raid Runic squad|1
