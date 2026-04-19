@@ -2,7 +2,7 @@
 # Edit this file to change scoring rules.
 # Lines starting with # are comments.
 
-[MAC] Fankayel: Level 20 epic Crypt|1
+Level 20 epic Crypt|1
 Level 25 epic Crypt|1
 Level 25 rare Crypt|1
 Level 25 crypt|1
