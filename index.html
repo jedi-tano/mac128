@@ -15,6 +15,14 @@
         }
         .updated-zone { font-size: 12px; color: #444; }
         .updated-time { font-size: 14px; font-weight: 700; margin-top: 2px; }
+        #total-points {
+            display: inline-block;
+            min-width: 70px;
+            padding: 3px 8px;
+            border-radius: 4px;
+            border: 1px solid #444;
+            color: #111;
+        }
         .filters { display: flex; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
         .filters label { display: flex; flex-direction: column; font-size: 13px; gap: 4px; }
         .filters select { padding: 4px 8px; font-size: 13px; min-width: 180px; }
@@ -201,6 +209,13 @@
             return sourcePoints[normalizeSourceKey(source)] ?? DEFAULT_POINTS_PER_CHEST;
         }
 
+        function updateTotalPointsColor(pointsValue) {
+            const clamped = Math.max(0, Math.min(200, pointsValue));
+            const ratio = clamped / 200;
+            const hue = ratio * 120; // 0 = red, 120 = green
+            totalPoints.style.backgroundColor = `hsl(${hue}, 75%, 55%)`;
+        }
+
         function renderTable() {
             const rows = getFilteredRows();
             tbody.innerHTML = '';
@@ -219,6 +234,7 @@
             const total = rows.reduce((sum, row) => sum + row.chestNumber, 0);
             totalChestNumber.textContent = total.toString();
             totalPoints.textContent = pointsTotal.toString();
+            updateTotalPointsColor(pointsTotal);
             rowCount.textContent = `${rows.length} groups | ${total} total chests | ${pointsTotal} total points.`;
         }
 
