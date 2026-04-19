@@ -27,3 +27,4 @@ Event Chest|0
 Epic Undead squad|1
 Beastman|1
 Bank|1
+Mercenary Exchange|1
