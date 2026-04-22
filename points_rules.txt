@@ -29,3 +29,5 @@ Beastman|2
 Bank|1
 Mercenary Exchange|1
 Arachne's Swarm Epic squad |2
+Epic Chimera squad|2
+Epic Inferno squad|2
