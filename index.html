@@ -267,8 +267,10 @@
             return sourcePoints[normalizeSourceKey(source)] ?? DEFAULT_POINTS_PER_CHEST;
         }
 
-        function updateTotalPointsColor(pointsValue) {
-            const maxPoints = colorMaxPoints > 0 ? colorMaxPoints : DEFAULT_COLOR_MAX_POINTS;
+        function updateTotalPointsColor(pointsValue, personCount) {
+            const baseMaxPoints = colorMaxPoints > 0 ? colorMaxPoints : DEFAULT_COLOR_MAX_POINTS;
+            const safePersonCount = Math.max(personCount || 0, 1);
+            const maxPoints = baseMaxPoints * safePersonCount;
             let fillColor;
             let fillWidth;
             
@@ -295,6 +297,7 @@
             const rows = getFilteredRows();
             tbody.innerHTML = '';
             let pointsTotal = 0;
+            const personCount = unique(rows.map(r => r.from)).length;
             rows.forEach(({ chestNumber, from, source }) => {
                 const tr = document.createElement('tr');
                 const rowPoints = chestNumber * pointsPerChest(source || '');
@@ -309,7 +312,7 @@
             const total = rows.reduce((sum, row) => sum + row.chestNumber, 0);
             totalChestNumber.textContent = total.toString();
             totalPoints.textContent = pointsTotal.toString();
-            updateTotalPointsColor(pointsTotal);
+            updateTotalPointsColor(pointsTotal, personCount);
             rowCount.textContent = `${rows.length} groups | ${total} total chests | ${pointsTotal} total points.`;
         }
 
