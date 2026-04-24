@@ -337,9 +337,13 @@
                 bucket.pointsTotal += chestNumber * pointsPerChest(source || '');
             });
 
-            const ordered = [...byPerson.entries()].sort((a, b) =>
-                a[0].localeCompare(b[0], undefined, { sensitivity: 'base' })
-            );
+            const ordered = [...byPerson.entries()].sort((a, b) => {
+                const pointsDiff = b[1].pointsTotal - a[1].pointsTotal;
+                if (pointsDiff !== 0) {
+                    return pointsDiff;
+                }
+                return a[0].localeCompare(b[0], undefined, { sensitivity: 'base' });
+            });
 
             personSummaryBody.innerHTML = '';
             if (!ordered.length) {
