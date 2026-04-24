@@ -50,6 +50,20 @@
             font-size: 12px;
             color: #444;
         }
+        .person-summary-wrap {
+            margin: 0 0 12px;
+            width: 90%;
+        }
+        .person-summary-title {
+            font-size: 14px;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+        .person-summary-empty {
+            font-size: 13px;
+            color: #555;
+            margin: 4px 0 8px;
+        }
         table {
             border-collapse: collapse;
             width: 90%;
@@ -111,6 +125,21 @@
         </div>
     </div>
 
+    <div class="person-summary-wrap">
+        <div class="person-summary-title">Per Person Score (Filtered)</div>
+        <table>
+            <thead>
+                <tr>
+                    <th>From</th>
+                    <th>Chest Number</th>
+                    <th>Points</th>
+                </tr>
+            </thead>
+            <tbody id="person-summary-body"></tbody>
+        </table>
+        <div class="person-summary-empty" id="person-summary-empty" style="display:none;">No data for current filters.</div>
+    </div>
+
     <table>
         <thead>
             <tr>
@@ -143,6 +172,8 @@
         const totalChestNumber = document.getElementById('total-chest-number');
         const totalPoints = document.getElementById('total-points');
         const pointsColorFill = document.getElementById('points-color-fill');
+        const personSummaryBody = document.getElementById('person-summary-body');
+        const personSummaryEmpty = document.getElementById('person-summary-empty');
         const updatedUtc = document.getElementById('updated-utc');
         const updatedLa = document.getElementById('updated-la');
         const updatedSg = document.getElementById('updated-sg');
@@ -293,6 +324,41 @@
             pointsColorFill.style.width = `${fillWidth}%`;
         }
 
+        function renderPersonSummary(rows) {
+            const byPerson = new Map();
+
+            rows.forEach(({ from, source, chestNumber }) => {
+                const key = from || '—';
+                if (!byPerson.has(key)) {
+                    byPerson.set(key, { chestTotal: 0, pointsTotal: 0 });
+                }
+                const bucket = byPerson.get(key);
+                bucket.chestTotal += chestNumber;
+                bucket.pointsTotal += chestNumber * pointsPerChest(source || '');
+            });
+
+            const ordered = [...byPerson.entries()].sort((a, b) =>
+                a[0].localeCompare(b[0], undefined, { sensitivity: 'base' })
+            );
+
+            personSummaryBody.innerHTML = '';
+            if (!ordered.length) {
+                personSummaryEmpty.style.display = 'block';
+                return;
+            }
+
+            personSummaryEmpty.style.display = 'none';
+            ordered.forEach(([name, totals]) => {
+                const tr = document.createElement('tr');
+                [name, totals.chestTotal.toString(), totals.pointsTotal.toString()].forEach(text => {
+                    const td = document.createElement('td');
+                    td.textContent = text;
+                    tr.appendChild(td);
+                });
+                personSummaryBody.appendChild(tr);
+            });
+        }
+
         function renderTable() {
             const rows = getFilteredRows();
             tbody.innerHTML = '';
@@ -313,6 +379,7 @@
             totalChestNumber.textContent = total.toString();
             totalPoints.textContent = pointsTotal.toString();
             updateTotalPointsColor(pointsTotal, personCount);
+            renderPersonSummary(rows);
             rowCount.textContent = `${rows.length} groups | ${total} total chests | ${pointsTotal} total points.`;
         }
 
