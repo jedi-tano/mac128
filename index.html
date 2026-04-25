@@ -64,6 +64,25 @@
             color: #555;
             margin: 4px 0 8px;
         }
+        .person-points-cell {
+            font-weight: 700;
+        }
+        .person-points-red {
+            background-color: #ef9a9a;
+            color: #7f0000;
+        }
+        .person-points-orange {
+            background-color: #ffe5cc;
+            color: #8a4b00;
+        }
+        .person-points-yellow {
+            background-color: #fff7cc;
+            color: #6b5a00;
+        }
+        .person-points-green {
+            background-color: #d7f2d7;
+            color: #1f6b1f;
+        }
         table {
             border-collapse: collapse;
             width: 90%;
@@ -354,11 +373,30 @@
             personSummaryEmpty.style.display = 'none';
             ordered.forEach(([name, totals]) => {
                 const tr = document.createElement('tr');
-                [name, totals.chestTotal.toString(), totals.pointsTotal.toString()].forEach(text => {
-                    const td = document.createElement('td');
-                    td.textContent = text;
-                    tr.appendChild(td);
-                });
+                const nameTd = document.createElement('td');
+                nameTd.textContent = name;
+                tr.appendChild(nameTd);
+
+                const chestTd = document.createElement('td');
+                chestTd.textContent = totals.chestTotal.toString();
+                tr.appendChild(chestTd);
+
+                const maxPoints = colorMaxPoints > 0 ? colorMaxPoints : DEFAULT_COLOR_MAX_POINTS;
+                const percentOfMax = (totals.pointsTotal / maxPoints) * 100;
+                let colorClass = 'person-points-green';
+                if (percentOfMax < 50) {
+                    colorClass = 'person-points-red';
+                } else if (percentOfMax < 75) {
+                    colorClass = 'person-points-orange';
+                } else if (percentOfMax < 100) {
+                    colorClass = 'person-points-yellow';
+                }
+
+                const pointsTd = document.createElement('td');
+                pointsTd.textContent = totals.pointsTotal.toString();
+                pointsTd.classList.add('person-points-cell', colorClass);
+                tr.appendChild(pointsTd);
+
                 personSummaryBody.appendChild(tr);
             });
         }
