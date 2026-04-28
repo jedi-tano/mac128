@@ -50,6 +50,25 @@
             font-size: 12px;
             color: #444;
         }
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .week-selector-wrap {
+            display: flex;
+            flex-direction: column;
+            font-size: 13px;
+            gap: 4px;
+            min-width: 180px;
+            margin-bottom: 6px;
+        }
+        .week-selector-wrap select {
+            padding: 4px 8px;
+            font-size: 13px;
+        }
         .person-summary-wrap {
             margin: 0 0 12px;
             width: 90%;
@@ -104,7 +123,15 @@
 </head>
 <body>
 
-    <h2>Data for this week <span id="week-number"></span></h2>
+    <div class="page-header">
+        <h2>Data for <span id="week-label">Current Week</span> <span id="week-number"></span></h2>
+        <label class="week-selector-wrap">Week View
+            <select id="week-selector">
+                <option value="current" selected>Current Week</option>
+                <option value="last">Last Week</option>
+            </select>
+        </label>
+    </div>
     <div class="version-stamp" id="version-stamp">Design version: loading...</div>
 
     <div class="updated-strip">
@@ -176,18 +203,17 @@
     <p id="row-count"></p>
 
     <script src="data.js"></script>
+    <script src="last_week_data.js"></script>
 
     <script>
         const fallbackUpdatedIso = '2026-04-17T19:37:34-07:00';
-        const latestDataIso =
-            typeof rawDataLastUpdatedIso === 'string' && rawDataLastUpdatedIso
-                ? rawDataLastUpdatedIso
-                : fallbackUpdatedIso;
         const tbody = document.getElementById('data-table-body');
         const rowCount = document.getElementById('row-count');
         const sourceHeader = document.getElementById('source-header');
         const filterFrom = document.getElementById('filter-from');
         const filterSource = document.getElementById('filter-source');
+        const weekSelector = document.getElementById('week-selector');
+        const weekLabel = document.getElementById('week-label');
         const totalChestNumber = document.getElementById('total-chest-number');
         const totalPoints = document.getElementById('total-points');
         const pointsColorFill = document.getElementById('points-color-fill');
@@ -198,6 +224,21 @@
         const updatedSg = document.getElementById('updated-sg');
         const versionStamp = document.getElementById('version-stamp');
         let sourceSortAsc = true;
+        let latestDataIso = fallbackUpdatedIso;
+        let groupedRows = [];
+
+        const weekDataSets = {
+            current: {
+                label: 'Current Week',
+                rows: Array.isArray(rawData) ? rawData : [],
+                updatedIso: typeof rawDataLastUpdatedIso === 'string' ? rawDataLastUpdatedIso : ''
+            },
+            last: {
+                label: 'Last Week',
+                rows: typeof lastWeekRawData !== 'undefined' && Array.isArray(lastWeekRawData) ? lastWeekRawData : [],
+                updatedIso: typeof lastWeekRawDataLastUpdatedIso === 'string' ? lastWeekRawDataLastUpdatedIso : ''
+            }
+        };
 
         const DEFAULT_SOURCE_POINTS = {};
         const DEFAULT_POINTS_PER_CHEST = 0;
@@ -295,14 +336,14 @@
             versionStamp.textContent = `Design version: ${formatInZone(updatedDate, 'America/Los_Angeles')}`;
         }
 
-        // rawData is a pre-grouped JSON array produced by text_to_data_js.py
-        // Each element: { from, source, chestNumber }
-        const groupedRows = rawData;
-
-        // Populate filter dropdowns with sorted unique values
         function unique(arr) { return [...new Set(arr)].filter(Boolean).sort((a,b) => a.localeCompare(b, undefined, {sensitivity:'base'})); }
-        unique(groupedRows.map(r => r.from)).forEach(v => filterFrom.add(new Option(v, v)));
-        unique(groupedRows.map(r => r.source)).forEach(v => filterSource.add(new Option(v, v)));
+
+        function populateFilters() {
+            filterFrom.innerHTML = '<option value="">All</option>';
+            filterSource.innerHTML = '<option value="">All</option>';
+            unique(groupedRows.map(r => r.from)).forEach(v => filterFrom.add(new Option(v, v)));
+            unique(groupedRows.map(r => r.source)).forEach(v => filterSource.add(new Option(v, v)));
+        }
 
         function getFilteredRows() {
             const f = filterFrom.value.toLowerCase();
@@ -485,22 +526,46 @@
             }).format(date);
         }
 
-        function displayWeekNumber() {
-            const today = new Date();
-            const weekNum = getWeekNumber(today);
-            const { start, end } = getWeekStartEnd(today);
+        function displayWeekNumber(weekOffset) {
+            const baseDate = new Date();
+            baseDate.setDate(baseDate.getDate() + (weekOffset * 7));
+            const weekNum = getWeekNumber(baseDate);
+            const { start, end } = getWeekStartEnd(baseDate);
             const startStr = formatDateShort(start);
             const endStr = formatDateShort(end);
             document.getElementById('week-number').textContent = `(Week ${weekNum}: ${startStr} - ${endStr})`;
         }
 
-        async function initializePage() {
+        function applyWeekSelection() {
+            const key = weekSelector.value === 'last' ? 'last' : 'current';
+            const selected = weekDataSets[key];
+
+            groupedRows = [...selected.rows];
+            latestDataIso = selected.updatedIso || fallbackUpdatedIso;
+            weekLabel.textContent = selected.label;
+
+            filterFrom.value = '';
+            filterSource.value = '';
+            populateFilters();
             renderVersionStamp();
             renderUpdatedTimes();
-            await loadSourcePointsFromFile();
-            displayWeekNumber();
+            displayWeekNumber(key === 'last' ? -1 : 0);
             renderTable();
+
+            if (key === 'last' && selected.rows.length === 0) {
+                rowCount.textContent = 'No last week data available yet. Add it in last_week_data.js.';
+            }
         }
+
+        async function initializePage() {
+            await loadSourcePointsFromFile();
+            if (!weekDataSets.last.rows.length) {
+                weekSelector.options[1].textContent = 'Last Week (No Data)';
+            }
+            applyWeekSelection();
+        }
+
+        weekSelector.addEventListener('change', applyWeekSelection);
 
         initializePage();
     </script>
