@@ -33,3 +33,6 @@ Epic Chimera squad|2
 Epic Inferno squad|2
 Epic Basilisk squad|2
 Hermes' Store|2
+Epic Fenrir squad|2
+Epic Jormungandr squad|2
+Jormungandr Shop|2
