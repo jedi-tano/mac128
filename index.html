@@ -176,6 +176,7 @@
         <table>
             <thead>
                 <tr>
+                    <th>S.N.</th>
                     <th>From</th>
                     <th>Chest Number</th>
                     <th>Points</th>
@@ -412,8 +413,13 @@
             }
 
             personSummaryEmpty.style.display = 'none';
-            ordered.forEach(([name, totals]) => {
+            ordered.forEach(([name, totals], index) => {
                 const tr = document.createElement('tr');
+                
+                const snTd = document.createElement('td');
+                snTd.textContent = (index + 1).toString();
+                tr.appendChild(snTd);
+                
                 const nameTd = document.createElement('td');
                 nameTd.textContent = name;
                 tr.appendChild(nameTd);
